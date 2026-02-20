@@ -1,7 +1,7 @@
 # Math operations
 
 ## Addition
-- 3 + 5 = 9
+- 3 + 5 = 8
 - 10 + 7 = 17
 - 25 + 13 = 38
 
