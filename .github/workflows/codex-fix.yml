@@ -52,7 +52,7 @@ jobs:
           3. Fix only that specific result
           4. Do not change anything else" \
             --allowedTools "Edit,Read,Write" \
-            --output-file claude-output.md
+            --dangerously-skip-permissions
 
       - name: Commit and push
         run: |
