@@ -1,6 +1,6 @@
 # Next steps
 
-1. **Auto-transition ticket to "Done" when PR is merged** - Add a GitHub Action on PR merge that moves the Jira ticket to "Done" via Jira API.
+1. ~~**Auto-transition ticket after AI fix** - Transition to "Code Review" (success) or "In Progress" (failure/no changes) and assign to reviewer via Jira API.~~ DONE
 
 2. **Test with a real codebase** - Replace operations.md with an actual project. Add CLAUDE.md with project structure and test commands.
 
