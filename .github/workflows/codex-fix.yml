@@ -14,6 +14,7 @@ jobs:
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      JIRA_ASSIGNEE_ACCOUNT_ID: ${{ secrets.JIRA_ASSIGNEE_ACCOUNT_ID }}
 
     steps:
       - name: Checkout repo
@@ -109,6 +110,22 @@ jobs:
             -d "{\"body\":{\"version\":1,\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Claude Code has automatically fixed this issue.\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"PR: ${{ steps.pr.outputs.url }}\"}]}]}}" \
             "https://jgalarzah.atlassian.net/rest/api/3/issue/${{ steps.ticket.outputs.key }}/comment"
 
+      - name: Transition Jira ticket to Code Review
+        if: steps.pr.outputs.url
+        env:
+          ISSUE_KEY: ${{ steps.ticket.outputs.key }}
+        run: |
+          curl -s -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"transition":{"id":"3"}}' \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}/transitions"
+          curl -s -X PUT \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"fields\":{\"assignee\":{\"accountId\":\"${JIRA_ASSIGNEE_ACCOUNT_ID}\"}}}" \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}"
+
       - name: Comment failure on Jira ticket
         if: steps.claude.outputs.exit_code != '0'
         run: |
@@ -118,6 +135,22 @@ jobs:
             -d "{\"body\":{\"version\":1,\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Claude Code failed to fix this issue automatically. A developer will need to look at this manually.\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"Check the GitHub Action logs for details.\"}]}]}}" \
             "https://jgalarzah.atlassian.net/rest/api/3/issue/${{ steps.ticket.outputs.key }}/comment"
 
+      - name: Transition Jira ticket to In Progress (failure)
+        if: steps.claude.outputs.exit_code != '0'
+        env:
+          ISSUE_KEY: ${{ steps.ticket.outputs.key }}
+        run: |
+          curl -s -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"transition":{"id":"21"}}' \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}/transitions"
+          curl -s -X PUT \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"fields\":{\"assignee\":{\"accountId\":\"${JIRA_ASSIGNEE_ACCOUNT_ID}\"}}}" \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}"
+
       - name: Comment no changes on Jira ticket
         if: steps.push.outputs.no_changes == 'true'
         run: |
@@ -126,3 +159,19 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"body\":{\"version\":1,\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Claude Code analyzed the issue but made no changes. The issue may already be fixed or needs manual intervention.\"}]}]}}" \
             "https://jgalarzah.atlassian.net/rest/api/3/issue/${{ steps.ticket.outputs.key }}/comment"
+
+      - name: Transition Jira ticket to In Progress (no changes)
+        if: steps.push.outputs.no_changes == 'true'
+        env:
+          ISSUE_KEY: ${{ steps.ticket.outputs.key }}
+        run: |
+          curl -s -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"transition":{"id":"21"}}' \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}/transitions"
+          curl -s -X PUT \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"fields\":{\"assignee\":{\"accountId\":\"${JIRA_ASSIGNEE_ACCOUNT_ID}\"}}}" \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}"
