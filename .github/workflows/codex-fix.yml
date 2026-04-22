@@ -50,11 +50,7 @@ jobs:
 
           Description: ${{ github.event.client_payload.description }}
 
-          Instructions:
-          1. Read the file operations.md
-          2. Find the wrong result described in the ticket
-          3. Fix only that specific result
-          4. Do not change anything else" \
+          Follow the instructions in the repo's AGENTS.md to locate and fix the defect." \
             --allowedTools "Edit,Read,Write" \
             --dangerously-skip-permissions 2>&1)
           EXIT_CODE=$?
