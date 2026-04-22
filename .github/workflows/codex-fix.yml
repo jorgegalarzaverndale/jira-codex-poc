@@ -112,13 +112,30 @@ jobs:
 
       - name: Run Claude Code to fix the issue
         id: claude
+        env:
+          TICKET_KEY: ${{ steps.ticket.outputs.key }}
+          TICKET_TITLE: ${{ steps.ticket.outputs.title }}
+          TICKET_DESCRIPTION: ${{ github.event.client_payload.description }}
         run: |
           set +e
-          OUTPUT=$(claude -p "Jira ticket ${{ steps.ticket.outputs.key }}: ${{ steps.ticket.outputs.title }}
 
-          Description: ${{ github.event.client_payload.description }}
+          ATTACHMENTS_BLOCK=""
+          if [ -s /tmp/attachment-paths.txt ]; then
+            ATTACHMENTS_BLOCK=$'\n\nAttached screenshots from the ticket:\n'
+            while IFS= read -r p; do
+              [ -z "$p" ] && continue
+              ATTACHMENTS_BLOCK+="- $p"$'\n'
+            done < /tmp/attachment-paths.txt
+            ATTACHMENTS_BLOCK+=$'(These are QA screenshots of the bug. Read them with the Read tool as authoritative visual evidence. Do not copy them into the repo.)\n'
+          fi
 
-          Follow the instructions in the repo's AGENTS.md to locate and fix the defect." \
+          PROMPT="Jira ticket ${TICKET_KEY}: ${TICKET_TITLE}
+
+          Description: ${TICKET_DESCRIPTION}${ATTACHMENTS_BLOCK}
+
+          Follow the instructions in the repo's AGENTS.md to locate and fix the defect."
+
+          OUTPUT=$(claude -p "$PROMPT" \
             --allowedTools "Edit,Read,Write" \
             --dangerously-skip-permissions 2>&1)
           EXIT_CODE=$?
