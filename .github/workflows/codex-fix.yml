@@ -36,6 +36,74 @@ jobs:
           echo "title=${{ github.event.client_payload.title }}" >> $GITHUB_OUTPUT
           echo "key=${{ github.event.client_payload.key }}" >> $GITHUB_OUTPUT
 
+      - name: Fetch Jira image attachments
+        id: attachments
+        continue-on-error: true
+        env:
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          ISSUE_KEY: ${{ steps.ticket.outputs.key }}
+        run: |
+          set -u
+          mkdir -p ticket-attachments
+          : > /tmp/attachment-paths.txt
+
+          MAX_FILE_BYTES=$((5 * 1024 * 1024))
+          MAX_TOTAL_BYTES=$((20 * 1024 * 1024))
+          MAX_COUNT=5
+
+          RESPONSE=$(curl -sS -f \
+            -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+            "https://jgalarzah.atlassian.net/rest/api/3/issue/${ISSUE_KEY}?fields=attachment" \
+            || true)
+          if [ -z "$RESPONSE" ]; then
+            echo "No attachment response from Jira — continuing without images."
+            echo "count=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          ATTACHMENTS=$(printf '%s' "$RESPONSE" | jq -r '
+            .fields.attachment // []
+            | .[]
+            | select(.mimeType | test("^image/(png|jpe?g|gif|webp)$"))
+            | "\(.content)\t\(.filename)\t\(.mimeType)\t\(.size)"
+          ')
+
+          total=0
+          count=0
+          while IFS=$'\t' read -r URL FILENAME MIME SIZE; do
+            [ -z "${URL:-}" ] && continue
+            if [ "$count" -ge "$MAX_COUNT" ]; then
+              echo "Skip $FILENAME: exceeds count cap ($MAX_COUNT)."
+              continue
+            fi
+            if [ "$SIZE" -gt "$MAX_FILE_BYTES" ]; then
+              echo "Skip $FILENAME: $SIZE bytes over per-file cap."
+              continue
+            fi
+            new_total=$((total + SIZE))
+            if [ "$new_total" -gt "$MAX_TOTAL_BYTES" ]; then
+              echo "Skip $FILENAME: would exceed total cap."
+              continue
+            fi
+            SAFE_NAME=$(printf '%s' "$FILENAME" | tr -c 'A-Za-z0-9._-' '_')
+            OUT="ticket-attachments/${count}_${SAFE_NAME}"
+            if curl -sS -f -L \
+                -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+                -o "$OUT" "$URL"; then
+              ABS=$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")
+              printf '%s\n' "$ABS" >> /tmp/attachment-paths.txt
+              total=$new_total
+              count=$((count + 1))
+              echo "Downloaded $FILENAME ($SIZE bytes, $MIME)."
+            else
+              echo "Skip $FILENAME: download failed."
+            fi
+          done <<< "$ATTACHMENTS"
+
+          echo "count=$count" >> $GITHUB_OUTPUT
+          echo "Fetched $count image(s) totalling $total bytes."
+
       - name: Create branch
         run: |
           BRANCH="claude/fix-${{ steps.ticket.outputs.key }}"
