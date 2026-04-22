@@ -1,10 +1,9 @@
 # AGENTS.md
 
-## Project overview
-This repository contains a file called `operations.md` with math operations and their results. Some results may be incorrect.
-
 ## How to fix bugs
-- Read the Jira ticket description to identify which operation has a wrong result.
-- Open `operations.md` and correct only the result mentioned in the ticket.
-- Do not change any other values.
-- Keep the same formatting.
+
+- Read the Jira ticket description to understand the defect. If screenshots are attached, read them with the `Read` tool — treat them as authoritative visual evidence of the bug.
+- Locate the relevant file(s) in the repo. Do not assume a single fixture path; the defect could live in any component, page, or markdown document.
+- Fix only the specific defect the ticket describes. Do not refactor, rename, or touch unrelated code.
+- Preserve surrounding formatting, indentation, and conventions.
+- If the ticket links a Figma file or other design source, treat it as the source of truth for visual values (colors, spacing, typography).
