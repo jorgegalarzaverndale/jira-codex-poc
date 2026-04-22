@@ -147,6 +147,10 @@ jobs:
             echo "Output: $OUTPUT"
           fi
 
+      - name: Clean up downloaded attachments
+        if: always()
+        run: rm -rf ticket-attachments
+
       - name: Commit and push
         if: steps.claude.outputs.exit_code == '0'
         id: push
