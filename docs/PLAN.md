@@ -47,7 +47,7 @@ Seeded bugs (each ticket targets one):
 
 **Exit criteria met:** branch `jorge/demo-app-button-fixture` pushed, dev server verified rendering all three bugs, rendered HTML confirms bug markers.
 
-### Phase 3 — CI optimizations to support images — `[pending]`
+### Phase 3 — CI optimizations to support images — `[in review]`
 
 Wire CI to fetch Jira ticket attachments, filter to images, and pass paths into the prompt. Maps to tier-1 instructions §5.4 → §5.5.
 
